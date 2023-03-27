@@ -11,7 +11,7 @@
         private function load_db_config()
         { 
             $this->host = getenv('DB_HOST');
-            $this->db_name = getenv('DB_NAME');
+            $this->db_name = getenv('DB_DATABASE');
             $this->user_name = getenv('DB_USERNAME');
             $this->password = getenv('DB_PASSWORD');
             $this->port = getenv('DB_PORT');
@@ -35,6 +35,7 @@
 
         public function connect(){
             try{
+                echo('mysql:host='. $this->host.';port='.$this->port.';dbname='. $this->db_name);
                 $conn = new PDO('mysql:host='. $this->host.';port='.$this->port.';dbname='. $this->db_name, $this->user_name, $this->password);
                 $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             }catch(PDOException $e){
