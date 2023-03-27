@@ -1,6 +1,7 @@
 <?php
 
-class Security{
+class Security
+{
     private $firstname;
     private $lastname;
     private $email;
@@ -8,14 +9,21 @@ class Security{
 
     private $conn;
     private $table = "Security";
-    
+
     public function __construct(PDO $conn)
     {
         $this->conn = $conn;
     }
 
-    public function createSecurity($securityData){
-        $query = 'INSERT INTO '.$this->table. 'VALUES (:firstname, :lastname, :email, :phone)';
+    public function createSecurity($securityData)
+    {
+        $query = 'INSERT INTO ' . $this->table . '
+        SET
+        first_name = :firstname,
+        last_name = :lastname,
+        email =:email,
+        phone = :phone';
+
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':firstname', $securityData['firstname']);
         $stmt->bindParam(':lastname', $securityData['lastname']);
@@ -24,12 +32,10 @@ class Security{
         $stmt->execute();
 
         $securityId = $this->conn->lastInsertId();
-        $stmt = $this->conn->prepare('SELECT * FROM '.$this->table.' WHERE security_id = :securityId');
+        $stmt = $this->conn->prepare('SELECT * FROM ' . $this->table . ' WHERE security_id = :securityId');
         $stmt->bindParam(':securityId', $securityId);
         $stmt->execute();
         $createdUser = $stmt->fetch(PDO::FETCH_ASSOC);
         return $createdUser;
     }
-
-
 }

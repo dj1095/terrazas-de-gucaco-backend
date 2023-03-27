@@ -11,14 +11,19 @@ include_once '../../config/Database.php';
 include_once '../response/Response.php';
 
 $resp = new Response();
-if($_SERVER['REQUEST_METHOD'] == 'POST'){
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     $security = new Security(Database::getDBConnection());
-    $resp->data = $security->createSecurity($data);
-}else{
+    if($security->validateRequest($data)){
+        $resp->data = $security->createSecurity($data);
+    }else{
+        //appropriate error code
+    }
+    
+} else {
     header('Allow: POST');
     header('HTTP/1.1 405 Method Not Allowed');
     echo 'Unsupported HTTP method';
 }
-json_encode($resp)
-?>
+var_dump($resp);
+json_encode($resp);
