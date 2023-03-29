@@ -1,10 +1,10 @@
 <?php
 
-class Response{
+class Response implements JsonSerializable{
        
     public $status_code;
-    public $message;
-    public $errorMessage;
+    public $successMessage;
+    public $errorMessage = null;
     public $data = array();
 
     public function jsonSerialize() {
