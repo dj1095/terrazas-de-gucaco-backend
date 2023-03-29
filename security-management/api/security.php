@@ -21,13 +21,20 @@ try {
 
             //Get a single secuirty with given id 
         case preg_match('/^GET \/security\.php\?[A-za-z]+=[0-9]+$/', $resource) == 1:
+            //access id as route param
+            $id = $_GET['id'];
+            $users = $securityService->getSecurityDetails($id);
+            $message = count($users) > 0 ? "Fetch all users Succesful" : "No Results Found";
+            $resp = Utils::buildResponse(200, $users, $message, null);
+            echo json_encode($resp);
             break;
 
             //Get all of the securities details
         case preg_match('/^GET \/security\.php$/', $resource) == 1:
             $data = json_decode(file_get_contents('php://input'), true);
             $users = $securityService->get();
-            $resp = Utils::buildResponse(200, $users, "Fetch all users Succesful", null);
+            $message = count($users) > 0 ? "Fetch all users Succesful" : "No Results Found";
+            $resp = Utils::buildResponse(200, $users, $message, null);
             echo json_encode($resp);
             break;
 
@@ -35,7 +42,23 @@ try {
         case preg_match('/^POST \/security\.php$/', $resource) == 1:
             $data = json_decode(file_get_contents('php://input'), true);
             $security = $securityService->createSecurity($data);
-            $resp = Utils::buildResponse(200, array($security), "Security Created", null);
+            $resp = Utils::buildResponse(200, $security, "Security Created", null);
+            echo json_encode($resp);
+            break;
+
+            //Update a security guard
+        case preg_match('/^PATCH \/security\.php$/', $resource) == 1:
+            $data = json_decode(file_get_contents('php://input'), true);
+            $security = $securityService->updateSecurityDetails($data);
+            $message = count($security) > 0 ? "Update Successful" : "Unable to Update. Security_id does not exist";
+            $resp = Utils::buildResponse(200, $security, $message, null);
+            echo json_encode($resp);
+            break;
+        case preg_match('/^DELETE \/security\.php$/', $resource) == 1:
+            $data = json_decode(file_get_contents('php://input'), true);
+            $isDeleted = $securityService->deleteSecurityDetails($data);
+            $message = $isDeleted ? "Delete Successful" : "Unable to Delete. Security_id does not exist";
+            $resp = Utils::buildResponse(200, [], $message, null);
             echo json_encode($resp);
             break;
         default:
@@ -46,13 +69,12 @@ try {
             break;
     }
 } catch (Exception $ex) {
+    //var_dump($ex);
     http_response_code(400);
     $errorMessage = $ex->getMessage();
-    if($ex instanceof PDOException){
+    if ($ex instanceof PDOException) {
         $errorMessage = Utils::handleDBExceptions($ex);
     }
     $resp = Utils::buildResponse(400, [], null, $errorMessage);
     echo json_encode($resp);
 }
-
-
