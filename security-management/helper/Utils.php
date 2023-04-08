@@ -36,7 +36,7 @@ class Utils
 
     public static function handleDBExceptions(PDOException $ex)
     {
-        if (strpos($ex->getMessage(), "Integrity constraint violation: 1062 Duplicate entry")) {
+        if (strpos($ex->getMessage(), "Integrity constraint violation: 1062 Duplicate entry") !== false) {
             return "Email already exists";
         }
     }

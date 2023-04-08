@@ -12,17 +12,17 @@ class ManagerService
         $this->conn = Database::getDBConnection();
     }
 
-    public function getManagerDetails($managerId)
+    public function getManagerDetails($manager_email)
     {
-        if (!isset($managerId)) {
+        if (!isset($manager_email)) {
             throw new Exception("Invalid Manager Id");
         }
-        $id = htmlspecialchars(strip_tags($managerId));
-        $stmt = $this->conn->prepare('SELECT * FROM ' . $this->table . ' WHERE mgr_id = :mgr_id');
-        $stmt->bindParam(':mgr_id', $id);
+        $email = htmlspecialchars(strip_tags($manager_email));
+        $stmt = $this->conn->prepare('SELECT * FROM ' . $this->table . ' WHERE email = :email');
+        $stmt->bindParam(':email', $email);
         $stmt->execute();
-        $users = $stmt->rowCount() == 0 ? array() : array($stmt->fetch(PDO::FETCH_ASSOC));
-        return $users;
+        $managers = $stmt->rowCount() == 0 ? array() : array($stmt->fetch(PDO::FETCH_ASSOC));
+        return $managers;
     }
 
     public function createManager($request)
@@ -50,7 +50,7 @@ class ManagerService
         $stmt->execute();
 
         $userId = $this->conn->lastInsertId();
-        return $this->getManagerDetails($userId);
+        return $this->getManagerDetails($userData['email']);
     }
 
     public function sanitizeData($data)

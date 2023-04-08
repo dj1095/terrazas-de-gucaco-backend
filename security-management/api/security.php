@@ -1,10 +1,16 @@
 <?php
 header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token, Authorization');
 header('Content-Type:application/json; charset=UTF-8');
-header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS');
+header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE,PATCH,OPTIONS');
 header('Access-Control-Allow-Credentials: true');
-header("Access-Control-Allow-Headers: access");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token, Authorization');
+    header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    header('Access-Control-Allow-Credentials: true');
+    exit;
+  }
 
 require_once '../../models/Security.php';
 require_once '../service/SecurityService.php';
@@ -18,12 +24,11 @@ $securityService = new SecurityService();
 try {
     $data = json_decode(file_get_contents('php://input'), true);
     switch ($resource) {
-
             //Get a single secuirty with given id 
-        case preg_match('/^GET \/security\.php\?security_id=[0-9]+&mgr_id=[0-9]+$/', $resource) == 1:
+        case preg_match('/^GET \/security\.php\?security_id=[0-9]+&userId=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $resource) == 1:
             //access id as route param
             $id = $_GET['security_id'];
-            $mangerId = $_GET['mgr_id'];
+            $mangerId = $_GET['userId'];
             $users = $securityService->getSecurityDetails($id, $mangerId);
             $message = count($users) > 0 ? "Fetch user succesful" : "No Results Found";
             $resp = Utils::buildResponse(200, $users, $message, null);
@@ -52,7 +57,9 @@ try {
             $resp = Utils::buildResponse(200, $security, $message, null);
             echo json_encode($resp);
             break;
-        case preg_match('/^DELETE \/security\.php$/', $resource) == 1:
+        case preg_match('/^DELETE \/security\.php\?security_id=[0-9]+&userId=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $resource) == 1:
+            $data['security_id'] = $_GET['security_id'];
+            $data['userId'] = $_GET['userId'];
             $isDeleted = $securityService->deleteSecurityDetails($data);
             $message = $isDeleted ? "Delete Successful" : "Unable to Delete. Security_id does not exist";
             $resp = Utils::buildResponse(200, [], $message, null);

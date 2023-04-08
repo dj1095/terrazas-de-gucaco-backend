@@ -3,17 +3,19 @@ require_once './config/Database.php';
 require_once './models/User.php';
 require_once './security-management/helper/Utils.php';
 require_once './security-management/helper/Constants.php';
+require_once './login/service/UserRoleService.php';
 
 class UserService
 {
 
     private $conn;
     private $table = "User";
-    private $managerService = null;
+    private $userRoleService = null;
 
     public function __construct()
     {
         $this->conn = Database::getDBConnection();
+        $this->userRoleService = new UserRoleService();
     }
 
     public function createUser($data)
@@ -33,28 +35,42 @@ class UserService
         role_id = :role_id';
 
         $stmt = $this->conn->prepare($query);
+        $email = isset($userData['email']) ? $userData['email'] : "";
         $stmt->bindParam(':first_name', $userData['first_name']);
         $stmt->bindParam(':last_name', $userData['last_name']);
-        $stmt->bindParam(':email', $userData['email']);
+        $stmt->bindParam(':email', $email);
         $stmt->bindParam(':password', $userData['password']);
         $stmt->bindParam(':role_id', $userData['role_id']);
         $stmt->execute();
-
+        
         $userId = $this->conn->lastInsertId();
-        return $this->getUserDetails($userId);
+        return $this->getUserDetails($email);
     }
 
-    public function getUserDetails($userId)
+    public function getUserDetails($email)
     {
-        $userId = htmlspecialchars(strip_tags($userId));
-        if (!isset($userId)) {
+        $userId = htmlspecialchars(strip_tags($email));
+        if (!isset($email)) {
             throw new Exception("Invalid User Id");
         }
-        $stmt = $this->conn->prepare('SELECT * FROM ' . $this->table . ' WHERE user_id = :userId');
-        $stmt->bindParam(':userId', $userId);
+        $stmt = $this->conn->prepare('SELECT * FROM ' . $this->table . ' WHERE email = :email');
+        $stmt->bindParam(':email', $userId);
         $stmt->execute();
         $users = $stmt->rowCount() == 0 ? array() : array($stmt->fetch(PDO::FETCH_ASSOC));
         return $users;
+    }
+
+    public function validateUser($email,$password){
+        $users = $this->getUserDetails($email);
+        if(count($users) > 0){
+            $role = $this->userRoleService->getUserRole($users['role_id']);
+            return [
+                "first_name" => $users["first_name"],
+                "last_name" => $users["last_name"],
+                "email" => $users["email"],
+                "role" => $role["name"]
+            ];
+        }
     }
 
     public function sanitizeData($data)

@@ -20,15 +20,17 @@ class SecurityService
     public function deleteSecurityDetails($data)
     {
         //check if manger is building manager or security manager
-        $managerId = isset($data["mgr_id"]) ? $data["mgr_id"] : "";
-        if (!$this->isAuthorized($managerId)) {
+        $usr_email = isset($data["userId"]) ? $data["userId"] : "";
+        //return false if no manager is found else return manager id
+        $managerId = $this->isAuthorized($usr_email);
+        if ($managerId == false) {
             throw new Exception("Not Authorized");
         }
         if (!isset($data["security_id"])) {
             throw new Exception("Bad Request. Invalid security id ");
         }
         $id = htmlspecialchars(strip_tags($data["security_id"]));
-        if (count($this->getSecurityDetails($id, $managerId)) > 0) {
+        if (count($this->getSecurityDetails($id, $usr_email)) > 0) {
             $query = 'DELETE FROM ' . $this->table . '
             WHERE
             security_id = :id';
@@ -43,15 +45,17 @@ class SecurityService
     public function updateSecurityDetails($data)
     {
         //check if manger is building manager or security manager
-        $managerId = isset($data["mgr_id"]) ? $data["mgr_id"] : null;
-        if (!$this->isAuthorized($managerId)) {
+        $usr_email = isset($data["userId"]) ? $data["userId"] : null;
+        //return false if no manager is found else return manager id
+        $managerId = $this->isAuthorized($usr_email);
+        if ($managerId == false) {
             throw new Exception("Not Authorized");
         }
         if (!isset($data["security_id"]) || count($data) <= 1) {
             throw new Exception("Bad Request. Invalid security id or no details given to update");
         }
         $id = htmlspecialchars(strip_tags($data["security_id"]));
-        if (count($this->getSecurityDetails($id, $managerId)) > 0) {
+        if (count($this->getSecurityDetails($id, $usr_email)) > 0) {
             $allowedColums = array('first_name', 'last_name', 'email', 'phone_number', 'timings', 'place');
             $whereCols = ["security_id" => $data["security_id"]];
             $queryValues = Utils::buildUpdateQuery($this->table, $allowedColums, $data, $whereCols);
@@ -59,22 +63,25 @@ class SecurityService
             $values = $queryValues[1];
             $stmt = $this->conn->prepare($query);
             $stmt->execute($values);
-            $updatedDetails = $this->getSecurityDetails($id, $managerId);
+            $updatedDetails = $this->getSecurityDetails($id, $usr_email);
             return $updatedDetails;
         }
         return array();
     }
 
-    public function getSecurityDetails($id, $managerId)
+    public function getSecurityDetails($id, $userId)
     {
         $id = htmlspecialchars(strip_tags($id));
+        $userId = htmlspecialchars(strip_tags($userId));
         if (!isset($id)) {
             throw new Exception("Invalid Security Id");
         }
         //check if manger is building manager or security manager
-        if (!$this->isAuthorized($managerId)) {
-            throw new Exception("Not Authorized");
-        }
+         //return false if no manager is found else return manager id
+         $managerId = $this->isAuthorized($userId);
+         if ($managerId == false) {
+             throw new Exception("Not Authorized");
+         }
         $stmt = $this->conn->prepare('SELECT * FROM ' . $this->table . ' WHERE security_id = :securityId');
         $stmt->bindParam(':securityId', $id);
         $stmt->execute();
@@ -98,8 +105,10 @@ class SecurityService
     {
         //validate and sanitize the data
         $securityData = $this->sanitizeData($data);
-        $managerId = $data["mgr_id"];
-        if (!$this->isAuthorized($managerId)) {
+        $userId = isset($data["userId"]) ? $data["userId"] : null;
+        //return false if no manager is found else return manager id
+        $managerId = $this->isAuthorized($userId);
+        if ($managerId == false) {
             throw new Exception("Not Authorized");
         }
         if (!isset($data["last_name"]) || !isset($data["email"]) || !isset($data["phone_number"])) {
@@ -123,21 +132,24 @@ class SecurityService
         $stmt->bindParam(':phone_number', $securityData['phone_number']);
         $stmt->bindParam(':timings', $securityData['timings']);
         $stmt->bindParam(':place', $securityData['place']);
-        $stmt->bindParam(':mgr_id', $securityData['mgr_id']);
+        $stmt->bindParam(':mgr_id', $managerId);
         $stmt->execute();
 
         $securityId = $this->conn->lastInsertId();
-        return $this->getSecurityDetails($securityId, $managerId);
+        return $this->getSecurityDetails($securityId, $userId);
     }
 
-    public function isAuthorized($managerId)
+    public function isAuthorized($mgr_email)
     {
-        $managerDetails = $this->managerService->getManagerDetails($managerId);
+        $managerDetails = $this->managerService->getManagerDetails($mgr_email);
         $managerTitle = "";
         if (count($managerDetails) > 0) {
             $managerTitle = isset($managerDetails[0]["mgr_title"]) ? $managerDetails[0]["mgr_title"] : "";
+            if(Constants::BUILDING_MANAGER === $managerTitle || Constants::SECURITY_MANAGER === $managerTitle){
+                return is_numeric($managerDetails[0]["mgr_id"]) ? intval($managerDetails[0]["mgr_id"]) : $managerDetails[0]["mgr_id"];
+            }
         }
-        return Constants::BUILDING_MANAGER == $managerTitle || Constants::SECURITY_MANAGER == $managerTitle;
+        return false;
     }
 
     public function sanitizeData($data)
