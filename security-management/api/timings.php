@@ -13,54 +13,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
   }
 
 require_once '../../models/Security.php';
-require_once '../service/SecurityService.php';
+require_once '../service/SecurityTimingsService.php';
 require_once '../helper/Utils.php';
 
 $request_method = $_SERVER['REQUEST_METHOD'];
 $uri = explode('/', $_SERVER['REQUEST_URI']);
 $resource = $request_method . ' /' . end($uri);
 $resp = new Response();
-$securityService = new SecurityService();
+$securityTimingsService = new SecurityTimingsService();
 try {
     $data = json_decode(file_get_contents('php://input'), true);
     switch ($resource) {
             //Get a single secuirty with given id 
-        case preg_match('/^GET \/security\.php\?security_id=[0-9]+&userId=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $resource) == 1:
+        case preg_match('/^GET \/timings\.php\?shift_id=[0-9]+&userId=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $resource) == 1:
             //access id as route param
-            $id = $_GET['security_id'];
+            $id = $_GET['shift_id'];
             $mangerId = $_GET['userId'];
-            $users = $securityService->getSecurityDetails($id, $mangerId);
-            $message = count($users) > 0 ? "Fetch user succesful" : "No Results Found";
+            $timings = $securityTimingsService->getShiftDetails($id, $mangerId);
+            $message = count($timings) > 0 ? "Fetch user succesful" : "No Results Found";
+            $resp = Utils::buildResponse(200, $timings, $message, null);
+            echo json_encode($resp);
+            break;
+
+            //Get all of the shift details
+        case preg_match('/^GET \/timings\.php$/', $resource) == 1:
+            $users = $securityTimingsService->get();
+            $message = count($users) > 0 ? "Fetch all shifts Succesful" : "No Results Found";
             $resp = Utils::buildResponse(200, $users, $message, null);
             echo json_encode($resp);
             break;
 
-            //Get all of the securities details
-        case preg_match('/^GET \/security\.php$/', $resource) == 1:
-            $users = $securityService->get();
-            $message = count($users) > 0 ? "Fetch all users Succesful" : "No Results Found";
-            $resp = Utils::buildResponse(200, $users, $message, null);
+            //Create a shift for security guard
+        case preg_match('/^POST \/timings\.php$/', $resource) == 1:
+            $security = $securityTimingsService->createShift($data);
+            $resp = Utils::buildResponse(200, $security, "Shift Added", null);
             echo json_encode($resp);
             break;
 
-            //Create a security guard
-        case preg_match('/^POST \/security\.php$/', $resource) == 1:
-            $security = $securityService->createSecurity($data);
-            $resp = Utils::buildResponse(200, $security, "Security Created", null);
-            echo json_encode($resp);
-            break;
-
-            //Update a security guard
-        case preg_match('/^PATCH \/security\.php$/', $resource) == 1:
-            $security = $securityService->updateSecurityDetails($data);
-            $message = count($security) > 0 ? "Update Successful" : "Unable to Update. Security_id does not exist";
+            //Update shift details for security guard
+        case preg_match('/^PATCH \/timings\.php$/', $resource) == 1:
+            $security = $securityTimingsService->updateShiftDetails($data);
+            $message = count($security) > 0 ? "Update Successful" : "Unable to Update. Shift Id does not exist";
             $resp = Utils::buildResponse(200, $security, $message, null);
             echo json_encode($resp);
             break;
-        case preg_match('/^DELETE \/security\.php\?security_id=[0-9]+&userId=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $resource) == 1:
-            $data['security_id'] = $_GET['security_id'];
+        case preg_match('/^DELETE \/timings\.php\?shift_id=[0-9]+&userId=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $resource) == 1:
+            $data['id'] = $_GET['shift_id'];
             $data['userId'] = $_GET['userId'];
-            $isDeleted = $securityService->deleteSecurityDetails($data);
+            $isDeleted = $securityTimingsService->deleteShiftDetails($data);
             $message = $isDeleted ? "Delete Successful" : "Unable to Delete. Security_id does not exist";
             $resp = Utils::buildResponse(200, [], $message, null);
             echo json_encode($resp);

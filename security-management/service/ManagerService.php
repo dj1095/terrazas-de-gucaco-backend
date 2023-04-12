@@ -12,6 +12,18 @@ class ManagerService
         $this->conn = Database::getDBConnection();
     }
 
+    public function get()
+    {
+        $query = 'SELECT * FROM '. $this->table;
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        $results_arr = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            array_push($results_arr, $row);
+        }
+        return $results_arr;
+    }
+
     public function getManagerDetails($manager_email)
     {
         if (!isset($manager_email)) {

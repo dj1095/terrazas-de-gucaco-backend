@@ -88,6 +88,20 @@ class SecurityService
         $users = $stmt->rowCount() == 0 ? array() : array($stmt->fetch(PDO::FETCH_ASSOC));
         return $users;
     }
+    
+    //It doesn't check manager access. Calling method should take care of that.
+    public function getSecurityId($email)
+    {
+        $email = htmlspecialchars(strip_tags($email));
+        if (!isset($email)) {
+            throw new Exception("Invalid Security Email");
+        }
+        $stmt = $this->conn->prepare('SELECT * FROM ' . $this->table . ' WHERE email = :email');
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
+        $users = $stmt->rowCount() == 0 ? array() : array($stmt->fetch(PDO::FETCH_ASSOC));
+        return $users;
+    }
 
     public function get()
     {
