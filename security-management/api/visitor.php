@@ -25,11 +25,11 @@ $visitorService = new VisitorService();
 try {
     $data = json_decode(file_get_contents('php://input'), true);
     switch ($resource) {
-        case preg_match('/^GET \/visitor\.php\?visitor_id=[0-9]+&userId=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $resource) == 1:
+        case preg_match('/^GET \/visitor\.php\?visitor_id=[0-9]+$/', $resource) == 1:
             //access id as route param
             $visitor_id = isset($_GET['visitor_id']) ? $_GET['visitor_id'] : "";
             $user_email = isset($_GET['userId']) ? $_GET['userId'] : "";
-            $users = $visitorService->getVisitorDetails($visitor_id, $user_email);
+            $users = $visitorService->getVisitorDetails($visitor_id);
             $message = count($users) > 0 ? "Fetch user succesful" : "No Results Found";
             $resp = Utils::buildResponse(200, $users, $message, null);
             echo json_encode($resp);

@@ -73,7 +73,7 @@ try {
             break;
     }
 } catch (Exception $ex) {
-    var_dump($ex);
+    //var_dump($ex);
     http_response_code(400);
     $errorMessage = $ex->getMessage();
     if ($ex instanceof PDOException) {

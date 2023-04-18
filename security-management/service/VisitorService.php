@@ -25,12 +25,13 @@ class VisitorService
         v.email,
         v.phone_number,
         vd.vehicle_plate,
-        v.access_granted
+        v.access_granted,
+        vd.dl_number
     FROM
         Visitor v
             LEFT JOIN
         VisitorDetails vd ON v.visitor_id = vd.visitor_id';
-        
+
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         $results_arr = [];
@@ -40,13 +41,8 @@ class VisitorService
         return $results_arr;
     }
 
-    public function getVisitorDetails($visitor_id , $usr_email)
+    public function getVisitorDetails($visitor_id)
     {
-
-        $managerId = $this->isAuthorized($usr_email);
-        if ($managerId == false) {
-            throw new Exception("Not Authorized");
-        }
 
         $query = 'SELECT 
         v.visitor_id,
@@ -55,7 +51,8 @@ class VisitorService
         v.email,
         v.phone_number,
         vd.vehicle_plate,
-        v.access_granted
+        v.access_granted,
+        vd.dl_number
     FROM
         Visitor v
             LEFT JOIN
@@ -84,31 +81,61 @@ class VisitorService
 
     public function updateVisitorDetails($data)
     {
-        //check if manger is building manager or security manager
-        $usr_email = isset($data["userId"]) ? $data["userId"] : null;
-        //return false if no manager is found else return manager id
-        $managerId = $this->isAuthorized($usr_email);
-        if ($managerId == false) {
-            throw new Exception("Not Authorized");
-        }
         if (!isset($data["visitor_id"]) || count($data) <= 1) {
             throw new Exception("Bad Request. Invalid Visitor id or no details given to update");
         }
-        $id = htmlspecialchars(strip_tags($data["visitor_id"]));
-        if (count($this->getVisitorDetails($id, $usr_email)) > 0) {
-            $allowedColums = array('access_granted');
-            $whereCols = ["visitor_id" => $data["visitor_id"]];
-            $queryValues = Utils::buildUpdateQuery($this->visitor_table, $allowedColums, $data, $whereCols);
-            $query = $queryValues[0];
-            $values = $queryValues[1];
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute($values);
-            $updatedDetails = $this->getVisitorDetails($id, $usr_email);
-            return $updatedDetails;
+        $visitor_id = htmlspecialchars(strip_tags($data["visitor_id"]));
+        $visitor_details = $this->getVisitorDetails($visitor_id);
+        if (count($visitor_details) > 0) {
+            try {
+                $this->conn->beginTransaction();
+
+                $visitorDetail = $visitor_details[0];
+                $last_name = isset($data["last_name"]) ? $data["last_name"] : $visitorDetail["last_name"];
+                $first_name = isset($data["first_name"]) ? $data["first_name"] : $visitorDetail["first_name"];
+                $email = isset($data["email"]) ? $data["email"] : $visitorDetail["email"];
+                $phone_number = isset($data["phone_number"]) ? $data["phone_number"] : $visitorDetail["phone_number"];
+                $access_granted = isset($data["access_granted"]) ? $data["access_granted"] : $visitorDetail["access_granted"];
+                $vehicle_plate =  isset($data["vehicle_plate"]) ? $data["vehicle_plate"] : $visitorDetail["vehicle_plate"];
+                $dl_number =  isset($data["dl_number"]) ? $data["dl_number"] : $visitorDetail["dl_number"];
+
+                $visitor_update_query = "UPDATE " . $this->visitor_table . '
+                SET
+                last_name = :last_name,
+                first_name = :first_name,
+                email = :email,
+                phone_number = :phone_number,
+                access_granted = :access_granted
+                WHERE visitor_id = :visitor_id
+                ';
+
+                $stmt = $this->conn->prepare($visitor_update_query);
+                $stmt->bindParam(':last_name', $last_name);
+                $stmt->bindParam(':first_name', $first_name);
+                $stmt->bindParam(':email', $email);
+                $stmt->bindParam(':phone_number', $phone_number);
+                $stmt->bindParam(':access_granted', $access_granted);
+                $stmt->bindParam(':visitor_id', $visitor_id);
+                $stmt->execute();
+
+                $visitor_details_update_query = "UPDATE " . $this->visitor_details_table . '
+                SET
+                vehicle_plate = :vehicle_plate,
+                dl_number = :dl_number
+                WHERE visitor_id = :visitor_id
+                ';
+                $stmt2 = $this->conn->prepare($visitor_details_update_query);
+                $stmt2->bindParam(':dl_number', $dl_number);
+                $stmt2->bindParam(':vehicle_plate', $vehicle_plate);
+                $stmt2->bindParam(':visitor_id', $visitor_id);
+                $stmt2->execute();
+                $this->conn->commit();
+                return $this->getVisitorDetails($visitor_id);
+            } catch (PDOException $ex) {
+                $this->conn->rollback();
+                throw new Exception("Unable to Update Visitor Details", -1, $ex);
+            }
         }
         return array();
     }
-
-
-    
 }
