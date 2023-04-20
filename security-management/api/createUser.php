@@ -12,40 +12,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit;
   }
 
-require_once '../service/VisitorService.php';
+require_once '../../login/service/UserService.php';
 require_once '../helper/Utils.php';
 require_once '../helper/Constants.php';
-require_once '../service/ManagerService.php';
 
+$data = json_decode(file_get_contents('php://input'), true);
 $request_method = $_SERVER['REQUEST_METHOD'];
 $uri = explode('/', $_SERVER['REQUEST_URI']);
 $resource = $request_method . ' /' . end($uri);
 $resp = new Response();
-$visitorService = new VisitorService();
+$userService = new UserService();
 try {
-    $data = json_decode(file_get_contents('php://input'), true);
     switch ($resource) {
-        case preg_match('/^GET \/visitor\.php\?visitor_id=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}+$/', $resource) == 1:
-            //access id as route param
-            $visitor_email = isset($_GET['visitor_id']) ? $_GET['visitor_id'] : "";
-            $user_email = isset($_GET['userId']) ? $_GET['userId'] : "";
-            $users = $visitorService->getVisitorDetails($visitor_email);
-            $message = count($users) > 0 ? "Fetch user succesful" : "No Results Found";
-            $resp = Utils::buildResponse(200, $users, $message, null);
-            echo json_encode($resp);
-            break;
-
-        case preg_match('/^GET \/visitor\.php$/', $resource) == 1:
-            $users = $visitorService->get();
-            $message = count($users) > 0 ? "Fetch all users Succesful" : "No Results Found";
-            $resp = Utils::buildResponse(200, $users, $message, null);
-            echo json_encode($resp);
-            break;
-
-        case preg_match('/^PATCH \/visitor\.php$/', $resource) == 1:
-            $visitor = $visitorService->updateVisitorDetails($data);
-            $message = count($visitor) > 0 ? "Update Successful" : "Unable to Update. Visitor_id does not exist";
-            $resp = Utils::buildResponse(200, $visitor, $message, null);
+        case preg_match('/^POST \/createUser\.php$/', $resource) == 1:
+            $user = $userService->createUser($data);
+            $resp = Utils::buildResponse(200, $user, "User Created", null);
             echo json_encode($resp);
             break;
 

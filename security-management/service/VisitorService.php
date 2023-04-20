@@ -41,7 +41,8 @@ class VisitorService
         return $results_arr;
     }
 
-    public function getVisitorDetails($visitor_id)
+
+    public function getVisitorDetails($visitor_email)
     {
 
         $query = 'SELECT 
@@ -58,9 +59,9 @@ class VisitorService
             LEFT JOIN
         VisitorDetails vd ON v.visitor_id = vd.visitor_id 
         WHERE
-    v.visitor_id = :visitor_id;';
+    v.email = :email;';
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':visitor_id', $visitor_id);
+        $stmt->bindParam(':email', $visitor_email);
         $stmt->execute();
         $users = $stmt->rowCount() == 0 ? array() : array($stmt->fetch(PDO::FETCH_ASSOC));
         return $users;
@@ -84,13 +85,13 @@ class VisitorService
         if (!isset($data["visitor_id"]) || count($data) <= 1) {
             throw new Exception("Bad Request. Invalid Visitor id or no details given to update");
         }
-        $visitor_id = htmlspecialchars(strip_tags($data["visitor_id"]));
-        $visitor_details = $this->getVisitorDetails($visitor_id);
+        $email = htmlspecialchars(strip_tags($data["visitor_id"]));
+        $visitor_details = $this->getVisitorDetails($email);
         if (count($visitor_details) > 0) {
             try {
                 $this->conn->beginTransaction();
-
                 $visitorDetail = $visitor_details[0];
+                $visitor_id =  $visitorDetail["visitor_id"];
                 $last_name = isset($data["last_name"]) ? $data["last_name"] : $visitorDetail["last_name"];
                 $first_name = isset($data["first_name"]) ? $data["first_name"] : $visitorDetail["first_name"];
                 $email = isset($data["email"]) ? $data["email"] : $visitorDetail["email"];
@@ -130,7 +131,7 @@ class VisitorService
                 $stmt2->bindParam(':visitor_id', $visitor_id);
                 $stmt2->execute();
                 $this->conn->commit();
-                return $this->getVisitorDetails($visitor_id);
+                return $this->getVisitorDetails($email);
             } catch (PDOException $ex) {
                 $this->conn->rollback();
                 throw new Exception("Unable to Update Visitor Details", -1, $ex);
