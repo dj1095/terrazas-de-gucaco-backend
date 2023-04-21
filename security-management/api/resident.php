@@ -34,6 +34,11 @@ try {
             $resp = Utils::buildResponse(200, $users, $message, null);
             echo json_encode($resp);
             break;
+        case preg_match('/^POST \/resident\.php$/', $resource) == 1:
+            $manager = $residentService->createResident($data);
+            $resp = Utils::buildResponse(200, $manager, "Resident Created", null);
+            echo json_encode($resp);
+            break;
 
         case preg_match('/^GET \/resident\.php$/', $resource) == 1:
             $users = $residentService->get();
@@ -57,7 +62,7 @@ try {
             break;
     }
 } catch (Exception $ex) {
-    //var_dump($ex);
+    var_dump($ex);
     http_response_code(400);
     $errorMessage = $ex->getMessage();
     if ($ex instanceof PDOException) {

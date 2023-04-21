@@ -139,4 +139,13 @@ class VisitorService
         }
         return array();
     }
+    
+    public function deleteVisitor($data){
+        //Get Visitor id
+
+        //Delete From Users Table 
+
+        //Delete from Visitor Table (Cascade in  place in DB)
+
+    }
 }

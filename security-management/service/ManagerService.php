@@ -2,15 +2,19 @@
 require_once '../../config/Database.php';
 require_once '../../models/Security.php';
 require_once '../helper/Utils.php';
+require_once '../helper/Constants.php';
+require_once '../../login/service/UserRoleService.php';
 
 class ManagerService
 {
     private $conn;
     private $table = "Manager";
     private $user_table = "User";
+    private $roleService = null;
     public function __construct()
     {
         $this->conn = Database::getDBConnection();
+        $this->roleService = new UserRoleService();
     }
 
     public function get()
@@ -48,22 +52,6 @@ class ManagerService
         try {
             $this->conn->beginTransaction();
 
-            //Create an entry in User table with Default Credentials
-            $user_query = 'INSERT INTO ' . $this->user_table . '
-            SET
-            first_name = :first_name,
-            last_name = :last_name,
-            email =:email,
-            password = 1234, 
-            role_id = :role_id';
-            $stmt = $this->conn->prepare($user_query);
-            $stmt->bindParam(':first_name', $userData['first_name']);
-            $stmt->bindParam(':last_name', $userData['last_name']);
-            $stmt->bindParam(':email', $userData['email']);
-            $stmt->bindParam(':role_id', $userData['role_id']);
-            $stmt->execute();
-            $userId = $this->conn->lastInsertId();
-
             //Get Manager Title 
 
             $role_query = 'SELECT name as mgr_title FROM Role WHERE role_id = :role_id';
@@ -72,16 +60,38 @@ class ManagerService
             $statement->execute();
             $mgr_title = $statement->fetch(PDO::FETCH_ASSOC)['mgr_title'];
 
+
+            //Create an entry in User table with Default Credentials
+            $user_query = 'INSERT INTO ' . $this->user_table . '
+            SET
+            first_name = :first_name,
+            last_name = :last_name,
+            email =:email,
+            password = :default_password, 
+            role_id = :role_id,
+            title = :mgr_title';
+
+            $stmt = $this->conn->prepare($user_query);
+            $stmt->bindParam(':first_name', $userData['first_name']);
+            $stmt->bindParam(':last_name', $userData['last_name']);
+            $stmt->bindParam(':email', $userData['email']);
+            $default_password = Constants::DEFAULT_PASSWORD;
+            $stmt->bindParam(':default_password', $default_password);
+            $stmt->bindParam(':role_id', $userData['role_id']);
+            $stmt->bindParam(':mgr_title', $mgr_title);
+            $stmt->execute();
+            $userId = $this->conn->lastInsertId();
+
             //Create a Manager in Manager Table
 
             $query = 'INSERT INTO ' . $this->table . '
-        SET
-        first_name = :first_name,
-        last_name = :last_name,
-        email =:email,
-        phone_number = :phone_number,
-        mgr_title = :mgr_title,
-        user_id = :user_id';
+            SET
+            first_name = :first_name,
+            last_name = :last_name,
+            email =:email,
+            phone_number = :phone_number,
+            mgr_title = :mgr_title,
+            user_id = :user_id';
 
             $stmt2 = $this->conn->prepare($query);
             $stmt2->bindParam(':first_name', $userData['first_name']);
@@ -95,7 +105,8 @@ class ManagerService
             return $this->getManagerDetails($userData['email']);
         } catch (PDOException $ex) {
             $this->conn->rollback();
-            throw new Exception("Unable to Create Manager", -1, $ex);
+            $message = Utils::handleDBExceptions($ex);
+            throw new Exception($message, -1, $ex);
         }
         return array();
     }
@@ -105,9 +116,46 @@ class ManagerService
         if (!isset($data["email"]) || count($data) <= 1) {
             throw new Exception("Bad Request. Invalid manager id or no details given to update");
         }
-        $email = htmlspecialchars(strip_tags($data["email"]));
+        try{
+            $this->conn->beginTransaction();
+            $email = htmlspecialchars(strip_tags($data["email"]));
+            $managers = $this->getManagerDetails($email);
+            if(count($managers)< 1){
+                return array();
+            }
+            $manager = $managers[0];
+            //Get Updated Role
+            $role_id = isset($data["role_id"]) ? $data["role_id"] : $manager["role_id"];
+            $title = $this->roleService->getUserRole($role_id )["name"];
+            $data["title"] = $title;
+            //Update User Table
+            $allowedColums = array('first_name', 'last_name', 'email','role_id','title');
+            $whereCols = ["email" => $email];
+            $queryValues = Utils::buildUpdateQuery($this->user_table, $allowedColums, $data, $whereCols);
+            $query = $queryValues[0];
+            $values = $queryValues[1];
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute($values);
+
+            //Update Managers Table
+            $data["mgr_title"] = $title;
+            $allowedColums2 = array('first_name', 'last_name', 'email','phone_number','mgr_title');
+            $whereCols2 = ["email" => $email];
+            $queryValues2 = Utils::buildUpdateQuery($this->table, $allowedColums2, $data, $whereCols2);
+            $query2 = $queryValues2[0];
+            $values2 = $queryValues2[1];
+            $stmt2 = $this->conn->prepare($query2);
+            $stmt2->execute($values2);
+
+            $this->conn->commit();
+            return $this->getManagerDetails($email);
+        }catch (PDOException $ex) {
+            $this->conn->rollback();
+            $message = Utils::handleDBExceptions($ex);
+            throw new Exception($message, -1, $ex);
+        }
         if (count($this->getManagerDetails($email)) > 0) {
-            $allowedColums = array('first_name', 'last_name', 'email', 'phone_number');
+            $allowedColums = array('first_name', 'last_name', 'email', 'phone_number','mgr_title');
             $whereCols = ["email" => $data["email"]];
             $queryValues = Utils::buildUpdateQuery($this->table, $allowedColums, $data, $whereCols);
             $query = $queryValues[0];

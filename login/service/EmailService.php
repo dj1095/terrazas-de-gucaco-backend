@@ -10,7 +10,7 @@
         {
         }
         
-        public function send_email($from_address, $from_name, $to_address, $to_name, $messageSubject, $messageBody){
+        public function send_email($to_address, $to_name, $messageSubject, $messageBody){
             $mail = new PHPMailer(true);
             $mail->isSMTP();
             $mail->SMTPAuth = true;
@@ -22,7 +22,10 @@
             $mail->Username =  getenv('EMAIL_USERNAME') ?? null;
             $mail->Password = getenv('EMAIL_PASSWORD') ?? null;
             
-            $mail->setFrom($from_address, $from_name);
+            $from_addr = getenv("FROM_ADDRESS");
+            $from_name = getenv("FROM_NAME");
+            
+            $mail->setFrom($from_addr, $from_name);
             $mail->addAddress($to_address, $to_name);
 
             $mail->Subject = $messageSubject;

@@ -34,10 +34,8 @@ try {
                 $user = $user[0];
                 $subject = 'Password Recovery Email';
                 $body = 'The password for '.$user["first_name"].' '.$user["last_name"].' is: '.$user["password"];
-                $from_addr = getenv("FROM_ADDRESS");
-                $from_name = getenv("FROM_NAME") ?? 'default';
                 $to_name = $user["first_name"].' '.$user["last_name"];
-                $email_service->send_email($from_addr,$from_name , $email, $to_name , $subject, $body);
+                $email_service->send_email($email, $to_name , $subject, $body);
                 $resp = Utils::buildResponse(200, [], "Email Sent Succesfully", null);
             }else{
                 $resp = Utils::buildResponse(401, [], null,"Invalid Email. User not found");

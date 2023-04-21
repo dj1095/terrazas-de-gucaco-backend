@@ -39,5 +39,6 @@ class Utils
         if (strpos($ex->getMessage(), "Integrity constraint violation: 1062 Duplicate entry") !== false) {
             return "Email already exists";
         }
+        return $ex->getMessage();
     }
 }
