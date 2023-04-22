@@ -24,30 +24,13 @@ $eventService = new EventService();
 try {
     $data = json_decode(file_get_contents('php://input'), true);
     switch ($resource) {
-        case preg_match('/^GET \/events\.php\?visitor_id=[0-9]+$/', $resource) == 1:
-            //access id as route param
-            $visitor_id = isset($_GET['visitor_id']) ? $_GET['visitor_id'] : "";
-            $events = $eventService->getVisitorEvents($visitor_id);
-            $message = count($events) > 0 ? "Fetch user succesful" : "No Results Found";
-            $resp = Utils::buildResponse(200, $events, $message, null);
+        case preg_match('/^GET \/activities\.php$/', $resource) == 1:
+            $activities = $eventService->getActivities();
+            $message = count($activities) > 0 ? "Fetch Activities succesful" : "No Results Found";
+            $resp = Utils::buildResponse(200, $activities, $message, null);
             echo json_encode($resp);
             break;
-
-        case preg_match('/^POST \/events\.php$/', $resource) == 1:
-            $event = $eventService->registerForEvent($data);
-            $resp = Utils::buildResponse(200, $event, "Event Successfuly Registered", null);
-            echo json_encode($resp);
-            break;
-
-        case preg_match('/^DELETE \/events\.php\?event_id=[0-9]+&visitor_id=[0-9]+$/', $resource) == 1:
-            $data['event_id'] = $_GET['event_id'];
-            $data['visitor_id'] = $_GET['visitor_id'];
-            $isDeleted = $eventService->cancelEvent($data);
-            $message = $isDeleted != -1 ? "Event Registration Cancelled Successfully" : "Unable to cancel event registration.";
-            $resp = Utils::buildResponse(200, [$isDeleted], $message, null);
-            echo json_encode($resp);
-            break;
-
+            
         default:
             http_response_code(400);
             $errorMessage = "No API found with the given Http Method and URL";
@@ -56,7 +39,7 @@ try {
             break;
     }
 } catch (Exception $ex) {
-    //var_dump($ex);
+    var_dump($ex);
     http_response_code(400);
     $errorMessage = $ex->getMessage();
     if ($ex instanceof PDOException) {

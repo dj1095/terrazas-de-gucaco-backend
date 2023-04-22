@@ -24,25 +24,25 @@ $eventService = new EventService();
 try {
     $data = json_decode(file_get_contents('php://input'), true);
     switch ($resource) {
-        case preg_match('/^GET \/events\.php\?visitor_id=[0-9]+$/', $resource) == 1:
+        case preg_match('/^GET \/residentEvents\.php\?userId=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $resource) == 1:
             //access id as route param
-            $visitor_id = isset($_GET['visitor_id']) ? $_GET['visitor_id'] : "";
-            $events = $eventService->getVisitorEvents($visitor_id);
-            $message = count($events) > 0 ? "Fetch user succesful" : "No Results Found";
+            $email = isset($_GET['userId']) ? $_GET['userId'] : "";
+            $events = $eventService->getResidentEvents($email);
+            $message = count($events) > 0 ? "Fetch Events succesful" : "No Results Found";
             $resp = Utils::buildResponse(200, $events, $message, null);
             echo json_encode($resp);
             break;
 
-        case preg_match('/^POST \/events\.php$/', $resource) == 1:
-            $event = $eventService->registerForEvent($data);
+        case preg_match('/^POST \/residentEvents\.php$/', $resource) == 1:
+            $event = $eventService->registerResidentForEvent($data);
             $resp = Utils::buildResponse(200, $event, "Event Successfuly Registered", null);
             echo json_encode($resp);
             break;
 
-        case preg_match('/^DELETE \/events\.php\?event_id=[0-9]+&visitor_id=[0-9]+$/', $resource) == 1:
+        case preg_match('/^DELETE \/residentEvents\.php\?event_id=[0-9]+&userId=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $resource) == 1:
             $data['event_id'] = $_GET['event_id'];
-            $data['visitor_id'] = $_GET['visitor_id'];
-            $isDeleted = $eventService->cancelEvent($data);
+            $data['userId'] = $_GET['userId'];
+            $isDeleted = $eventService->cancelResidentEvent($data);
             $message = $isDeleted != -1 ? "Event Registration Cancelled Successfully" : "Unable to cancel event registration.";
             $resp = Utils::buildResponse(200, [$isDeleted], $message, null);
             echo json_encode($resp);

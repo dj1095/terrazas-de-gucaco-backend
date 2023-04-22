@@ -9,6 +9,7 @@ class ResidentService
     private $conn;
     private $residents_table = "residents";
     private $users_table = "User";
+    private $PJ_Resident_Vehicle = "PJ_Resident_Vehicle";
     private $managerService = null;
     private $RESIDENT_ROLE_ID = 6;
     private $RESIDENT = "resident";
@@ -64,11 +65,11 @@ class ResidentService
     public function updateResidentDetails($data)
     {
         $resident_id = isset($data["resident_id"]) ? $data["resident_id"] : null;
-        $residents = $this->getResidentDetails($resident_id,"");
-        if(count($residents) < 1){
+        $residents = $this->getResidentDetails($resident_id, "");
+        if (count($residents) < 1) {
             return array();
         }
-        try{
+        try {
             $resident = $residents[0];
             $resident_email = $resident["email"];
             $this->conn->beginTransaction();
@@ -76,7 +77,7 @@ class ResidentService
             $first_name = isset($data["first_name"]) ? $data["first_name"] : $resident["first_name"];
             $last_name = isset($data["last_name"]) ? $data["last_name"] : $resident["last_name"];
             $email = isset($data["email"]) ? $data["email"] : $resident["email"];
-            
+
             $user_query = "UPDATE " . $this->users_table . "
             SET
             first_name = :first_name,
@@ -124,8 +125,8 @@ class ResidentService
             $stmt2->execute();
 
             $this->conn->commit();
-            return $this->getResidentDetails($resident_id,"");
-        }catch(Exception $ex){
+            return $this->getResidentDetails($resident_id, "");
+        } catch (Exception $ex) {
             $this->conn->rollback();
             throw new Exception("Unable To Update Resident ", -1, $ex);
         }
@@ -225,11 +226,11 @@ class ResidentService
         try {
             $this->conn->beginTransaction();
 
-            $mgr_delete = 'DELETE FROM '.$this->residents_table .' WHERE email = :email';
+            $mgr_delete = 'DELETE FROM ' . $this->residents_table . ' WHERE email = :email';
             $stmt2 = $this->conn->prepare($mgr_delete);
             $stmt2->bindParam(':email', $email);
 
-            $user_query = 'DELETE FROM '.$this->users_table .' WHERE email = :email';
+            $user_query = 'DELETE FROM ' . $this->users_table . ' WHERE email = :email';
             $stmt = $this->conn->prepare($user_query);
             $stmt->bindParam(':email', $email);
 
@@ -241,5 +242,97 @@ class ResidentService
             throw new Exception("Unable to Delete Resident", -1, $ex);
         }
         return false;
+    }
+
+    public function getResidentId($email)
+    {
+        if (!isset($email)) {
+            return "";
+        }
+        $query = 'SELECT * FROM ' . $this->residents_table . ' WHERE email = :email';
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
+        $resident = $stmt->fetch(PDO::FETCH_ASSOC);
+        return isset($resident["resident_id"]) ? $resident["resident_id"] : "";
+    }
+
+
+    public function addVehicle($data)
+    {
+        //email
+        $data["userId"] = isset($data["userId"]) ? $data["userId"] : null;
+        $resident_id = $this->getResidentId($data["userId"]);
+        if (empty($resident_id)) {
+            throw new Exception("Invalid Resident Id");
+        }
+
+        $data["vehicle_plate"] = isset($data["vehicle_plate"]) ? $data["vehicle_plate"] : "";
+        $data["vehicle_make"] = isset($data["vehicle_make"]) ? $data["vehicle_make"] : "";
+        $query = 'INSERT INTO ' . $this->PJ_Resident_Vehicle . '
+        SET
+        vehicle_plate = :vehicle_plate,
+        vehicle_make = :vehicle_make,
+        resident_id =:resident_id';
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':vehicle_plate', $data["vehicle_plate"]);
+        $stmt->bindParam(':vehicle_make', $data["vehicle_make"]);
+        $stmt->bindParam(':resident_id', $resident_id);
+        $stmt->execute();
+        $vehicle_id = $this->conn->lastInsertId();
+        return $stmt->rowCount() == 0 ? array() : $this->getVehicle($vehicle_id);
+    }
+
+    public function getVehicles($data)
+    {
+        //email
+        $data["userId"] = isset($data["userId"]) ? $data["userId"] : null;
+        $resident_id = $this->getResidentId($data["userId"]);
+        if (empty($resident_id)) {
+            throw new Exception("Invalid Resident Id");
+        }
+
+        $query = 'SELECT * FROM ' . $this->PJ_Resident_Vehicle . ' WHERE resident_id = :resident_id';
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':resident_id', $resident_id);
+        $stmt->execute();
+        $results_arr = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            array_push($results_arr, $row);
+        }
+        return $results_arr;
+    }
+
+    public function getVehicle($vehicle_id)
+    {
+        $vehicle_id = isset($vehicle_id) ? $vehicle_id : "";
+        $query = 'SELECT * FROM ' . $this->PJ_Resident_Vehicle . ' WHERE vehicle_id = :vehicle_id';
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':vehicle_id', $vehicle_id);
+        $stmt->execute();
+        return $stmt->rowCount() == 0 ? array() : array($stmt->fetch(PDO::FETCH_ASSOC));
+    }
+
+    public function updateVehicles($data)
+    {
+        $data["vehicle_id"] = isset($data["vehicle_id"]) ? $data["vehicle_id"] : null;
+        $allowedColums = array('vehicle_plate', 'vehicle_make');
+        $whereCols = ["vehicle_id" => $data["vehicle_id"]];
+        $queryValues = Utils::buildUpdateQuery($this->PJ_Resident_Vehicle, $allowedColums, $data, $whereCols);
+        $query = $queryValues[0];
+        $values = $queryValues[1];
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute($values);
+        return $this->getVehicle($data["vehicle_id"]);
+    }
+
+    public function deleteVehicle($data)
+    {
+        $data["vehicle_id"] = isset($data["vehicle_id"]) ? $data["vehicle_id"] : null;
+        $query = 'DELETE FROM ' . $this->PJ_Resident_Vehicle . ' WHERE vehicle_id = :vehicle_id';
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':vehicle_id', $data["vehicle_id"]);
+        $stmt->execute();
+        return $stmt->rowCount() != 0;
     }
 }
