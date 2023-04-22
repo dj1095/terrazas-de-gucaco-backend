@@ -42,6 +42,19 @@ class ManagerService
         return $managers;
     }
 
+    public function getManagerDetailsWithId($manager_id)
+    {
+        if (!isset($manager_id)) {
+            throw new Exception("Invalid Manager Id");
+        }
+        $email = htmlspecialchars(strip_tags($manager_id));
+        $stmt = $this->conn->prepare('SELECT * FROM ' . $this->table . ' WHERE mgr_id = :manager_id');
+        $stmt->bindParam(':manager_id', $manager_id);
+        $stmt->execute();
+        $managers = $stmt->rowCount() == 0 ? array() : array($stmt->fetch(PDO::FETCH_ASSOC));
+        return $managers;
+    }
+
     public function createManager($data)
     {
         //validate and sanitize the data
@@ -113,24 +126,27 @@ class ManagerService
 
     public function updateManagerDetails($data)
     {
-        if (!isset($data["email"]) || count($data) <= 1) {
+        if (!isset($data["mgr_id"]) || count($data) <= 1) {
             throw new Exception("Bad Request. Invalid manager id or no details given to update");
         }
         try{
             $this->conn->beginTransaction();
-            $email = htmlspecialchars(strip_tags($data["email"]));
-            $managers = $this->getManagerDetails($email);
+            $mgr_id = htmlspecialchars(strip_tags($data["mgr_id"]));
+            $managers = $this->getManagerDetailsWithId($mgr_id);
             if(count($managers)< 1){
                 return array();
             }
             $manager = $managers[0];
+            $mgr_email = $manager["email"];
+
             //Get Updated Role
             $role_id = isset($data["role_id"]) ? $data["role_id"] : $manager["role_id"];
             $title = $this->roleService->getUserRole($role_id )["name"];
             $data["title"] = $title;
+
             //Update User Table
             $allowedColums = array('first_name', 'last_name', 'email','role_id','title');
-            $whereCols = ["email" => $email];
+            $whereCols = ["email" => $mgr_email];
             $queryValues = Utils::buildUpdateQuery($this->user_table, $allowedColums, $data, $whereCols);
             $query = $queryValues[0];
             $values = $queryValues[1];
@@ -140,7 +156,7 @@ class ManagerService
             //Update Managers Table
             $data["mgr_title"] = $title;
             $allowedColums2 = array('first_name', 'last_name', 'email','phone_number','mgr_title');
-            $whereCols2 = ["email" => $email];
+            $whereCols2 = ["email" => $mgr_email];
             $queryValues2 = Utils::buildUpdateQuery($this->table, $allowedColums2, $data, $whereCols2);
             $query2 = $queryValues2[0];
             $values2 = $queryValues2[1];
@@ -148,22 +164,11 @@ class ManagerService
             $stmt2->execute($values2);
 
             $this->conn->commit();
-            return $this->getManagerDetails($email);
+            return $this->getManagerDetailsWithId($mgr_id);
         }catch (PDOException $ex) {
             $this->conn->rollback();
             $message = Utils::handleDBExceptions($ex);
             throw new Exception($message, -1, $ex);
-        }
-        if (count($this->getManagerDetails($email)) > 0) {
-            $allowedColums = array('first_name', 'last_name', 'email', 'phone_number','mgr_title');
-            $whereCols = ["email" => $data["email"]];
-            $queryValues = Utils::buildUpdateQuery($this->table, $allowedColums, $data, $whereCols);
-            $query = $queryValues[0];
-            $values = $queryValues[1];
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute($values);
-            $updatedDetails = $this->getManagerDetails($email);
-            return $updatedDetails;
         }
         return array();
     }

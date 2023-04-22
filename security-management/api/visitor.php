@@ -35,6 +35,12 @@ try {
             echo json_encode($resp);
             break;
 
+        case preg_match('/^POST \/visitor\.php$/', $resource) == 1:
+            $visitor = $visitorService->createVisitor($data);
+            $resp = Utils::buildResponse(200, $visitor, "Visitor Created", null);
+            echo json_encode($resp);
+            break;
+
         case preg_match('/^GET \/visitor\.php$/', $resource) == 1:
             $users = $visitorService->get();
             $message = count($users) > 0 ? "Fetch all users Succesful" : "No Results Found";
@@ -46,6 +52,13 @@ try {
             $visitor = $visitorService->updateVisitorDetails($data);
             $message = count($visitor) > 0 ? "Update Successful" : "Unable to Update. Visitor_id does not exist";
             $resp = Utils::buildResponse(200, $visitor, $message, null);
+            echo json_encode($resp);
+            break;
+        case preg_match('/^DELETE \/visitor\.php\?email=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}+$/', $resource) == 1:
+            $data['email'] = $_GET['email'];
+            $isDeleted = $visitorService->deleteVisitor($data);
+            $message = $isDeleted ? "Visitor Deleted Successfully" : "Unable to delete visitor";
+            $resp = Utils::buildResponse(200, [], $message, null);
             echo json_encode($resp);
             break;
 

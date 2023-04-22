@@ -1,6 +1,7 @@
 <?php
 require_once '../../config/Database.php';
 require_once '../../login/service/UserRoleService.php';
+require_once '../../security-management/helper/Constants.php';
 
 class UserService
 {
@@ -16,6 +17,25 @@ class UserService
     {
         $this->conn = Database::getDBConnection();
         $this->userRoleService = new UserRoleService();
+    }
+
+    public function getReports(){
+        $query = "SELECT 'security guards' AS name, COUNT(*) AS count FROM Security
+        UNION
+        SELECT 'Managers' AS Manager, COUNT(*) AS count FROM Manager
+        UNION
+        SELECT 'Visitors' AS Visitor, COUNT(*) AS count FROM Visitor
+        UNION
+        SELECT 'Residents' AS residents, COUNT(*) AS count FROM residents";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        $results_arr = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            array_push($results_arr, $row);
+        }
+        return $results_arr;
+
+
     }
 
     public function saveUserQuery($data){
@@ -52,9 +72,9 @@ class UserService
     {
         //validate and sanitize the data
         $userData = $this->sanitizeData($data);
-        if (!isset($data["last_name"]) || !isset($data["email"]) || !isset($data["password"]) || !isset($data["role_id"])) {
+        /*if (!isset($data["last_name"]) || !isset($data["email"]) || !isset($data["password"]) || !isset($data["role_id"])) {
             throw new Exception("mandatory fields[lastname,email,password, role_id] missing.");
-        }
+        }*/
         try {
             $this->conn->beginTransaction();
 
@@ -65,7 +85,8 @@ class UserService
         last_name = :last_name,
         email =:email,
         password = :password,
-        role_id = :role_id';
+        role_id = :role_id,
+        title = :title';
 
             $stmt = $this->conn->prepare($query);
             $email = isset($userData['email']) ? $userData['email'] : "";
@@ -74,6 +95,7 @@ class UserService
             $stmt->bindParam(':email', $email);
             $stmt->bindParam(':password', $userData['password']);
             $stmt->bindParam(':role_id', $userData['role_id']);
+            $stmt->bindParam(':title', $userData['title']);
             $stmt->execute();
             $userId = $this->conn->lastInsertId();
 
@@ -108,8 +130,9 @@ class UserService
 
             return $this->getUserDetails($email);
         } catch (Exception $ex) {
+            var_dump($ex);
             $this->conn->rollback();
-            throw new Exception("Unable to Update Visitor Details", -1, $ex);
+            throw new Exception("Unable to Create Visitor ", -1, $ex);
         }
         return array();
     }
@@ -156,11 +179,12 @@ class UserService
         $firstname = isset($data["first_name"]) ? $data["first_name"] : null;
         $lastname = isset($data["last_name"]) ? $data["last_name"] : null;
         $email = isset($data["email"]) ? $data["email"] : null;
-        $password = isset($data["password"]) ? $data["password"] : "1234";
+        $password = isset($data["password"]) ? $data["password"] : Constants::DEFAULT_PASSWORD;
         $phone_number = isset($data["phone_number"]) ? $data["phone_number"] : null;
         $vehiclePlate = isset($data["vehicle_plate"]) ? $data["vehicle_plate"] : "";
         $dlNumber = isset($data["dl_number"]) ? $data["dl_number"] : "";
-        $role_id = isset($data["role_id"]) ? $data["role_id"] : null;
+        $role_id = isset($data["role_id"]) ? $data["role_id"] : Constants::VISITOR_ROLE_ID;
+        $title = isset($data["title"]) ? $data["title"] : Constants::VISITOR;
         $data["first_name"] = htmlspecialchars(strip_tags($firstname));
         $data["last_name"] = htmlspecialchars(strip_tags($lastname));
         $data["email"] = htmlspecialchars(strip_tags($email));
@@ -169,6 +193,7 @@ class UserService
         $data["phone_number"] = htmlspecialchars(strip_tags($phone_number));
         $data["vehicle_plate"] = htmlspecialchars(strip_tags($vehiclePlate));
         $data["dl_number"] = htmlspecialchars(strip_tags($dlNumber));
+        $data["title"] = htmlspecialchars(strip_tags($title));
         return $data;
     }
 }

@@ -53,6 +53,13 @@ try {
             $resp = Utils::buildResponse(200, $resident, $message, null);
             echo json_encode($resp);
             break;
+        case preg_match('/^DELETE \/resident\.php\?email=[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}+$/', $resource) == 1:
+            $data['email'] = $_GET['email'];
+            $isDeleted = $residentService->deleteResident($data);
+            $message = $isDeleted ? "Resident Deleted Successfully" : "Unable to delete resident";
+            $resp = Utils::buildResponse(200, [], $message, null);
+            echo json_encode($resp);
+            break;
 
         default:
             http_response_code(400);

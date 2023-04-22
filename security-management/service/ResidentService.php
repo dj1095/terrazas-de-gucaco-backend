@@ -1,6 +1,7 @@
 <?php
 require_once '../../config/Database.php';
 require_once '../helper/Utils.php';
+require_once '../helper/Constants.php';
 require_once '../service/ManagerService.php';
 
 class ResidentService
@@ -59,14 +60,6 @@ class ResidentService
         return false;
     }
 
-
-    public function deleteResident($data){
-        //Get resident id
-
-        //Delete From Users Table 
-
-        //Delete from Residents Table
-    }
 
     public function updateResidentDetails($data)
     {
@@ -196,7 +189,8 @@ class ResidentService
             return $this->getResidentDetails($resident_id, $userId);
         } catch (Exception $ex) {
             $this->conn->rollback();
-            throw new Exception("Unable To Create Resident ", -1, $ex);
+            $message = Utils::handleDBExceptions($ex);
+            throw new Exception($message, -1, $ex);
         }
     }
 
@@ -207,7 +201,7 @@ class ResidentService
         $firstname = isset($data["first_name"]) ? $data["first_name"] : null;
         $lastname = isset($data["last_name"]) ? $data["last_name"] : null;
         $email = isset($data["email"]) ? $data["email"] : null;
-        $password = isset($data["password"]) ? $data["password"] : "1234";
+        $password = isset($data["password"]) ? $data["password"] : Constants::DEFAULT_PASSWORD;
         $phone = isset($data["phone"]) ? $data["phone"] : null;
         $unit_number = isset($data["unit_number"]) ? $data["unit_number"] : "";
         $building_id = isset($data["building_id"]) ? $data["building_id"] : "";
@@ -223,5 +217,29 @@ class ResidentService
         $data["building_id"] = htmlspecialchars(strip_tags($building_id));
         $data["DOB"] = htmlspecialchars(strip_tags($DOB));
         return $data;
+    }
+
+    public function deleteResident($data)
+    {
+        $email = isset($data["email"]) ? $data["email"] : "";
+        try {
+            $this->conn->beginTransaction();
+
+            $mgr_delete = 'DELETE FROM '.$this->residents_table .' WHERE email = :email';
+            $stmt2 = $this->conn->prepare($mgr_delete);
+            $stmt2->bindParam(':email', $email);
+
+            $user_query = 'DELETE FROM '.$this->users_table .' WHERE email = :email';
+            $stmt = $this->conn->prepare($user_query);
+            $stmt->bindParam(':email', $email);
+
+            $isDeleted =  $stmt2->execute() && $stmt->execute();
+            $this->conn->commit();
+            return  $isDeleted;
+        } catch (PDOException $ex) {
+            $this->conn->rollback();
+            throw new Exception("Unable to Delete Resident", -1, $ex);
+        }
+        return false;
     }
 }
