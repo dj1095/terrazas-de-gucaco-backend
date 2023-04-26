@@ -15,7 +15,7 @@ $method=$_SERVER['REQUEST_METHOD'];
 $URI=$_SERVER['REQUEST_URI'];
 if($method==='GET' && $URI===$path."Resident.php/log")
 {
-    $trp = mysqli_query($conn, "SELECT * from residentlog");
+    $trp = mysqli_query($conn, "SELECT * from Residentlog");
     $rows = array();
     while($r = mysqli_fetch_assoc($trp)) {
         $rows[] = $r;
@@ -23,36 +23,18 @@ if($method==='GET' && $URI===$path."Resident.php/log")
     echo json_encode($rows);
 }
 
-if($method==='POST' && $URI===" ")
+if($method==='POST' && $URI===$path."Resident.php/log-delete")
 {
     $json = file_get_contents('php://input');
     $obj = json_decode($json);
     $log_id=$obj->log_id;
 
-    $sql = "DELETE FROM residentlog WHERE log_id=?";
+    $sql = "DELETE FROM Residentlog WHERE LogId=?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $log_id);
     $stmt->execute(); 
 }
 
-// if($method==='POST' && $URI==="/terrazas-de-gucaco-backend/Resident.php/booking")
-// {
-//     $json = file_get_contents('php://input');
-//     $obj = json_decode($json);
-//     $UserName = $obj->day;
-//     $UserId = $obj->StartTime;
-//     $Amenities = $obj->EndTime;
-//     $Timing=$obj->Timing;
-
-//     $sql = "INSERT INTO ResidentBooking (UserName, UserId , Amenities, Timing)
-//     values(?,?,?,?);";
-//     $stmt = $conn->prepare($sql);
-//     $stmt->bind_param("ssss", $StartTime, $EndTime, $Day);
-
-//     // $stmt->bind_param("sss",$StartTime,$EndTime,$Day);
-//     $stmt->execute(); 
-
-// }
 
 if($method==='POST' && $URI===$path."Resident.php/profile")
 {
@@ -104,14 +86,13 @@ if($method==='POST' && $URI===$path."Resident.php/vehicles")
     $VehicleMake=$obj->VehicleMake;
     $OwnerName=$obj->OwnerName;
     $APtNumber=$obj->APtNumber;
+    // echo('working');
 
-
-    $sql = "INSERT INTO ResidentVehicle (Email, NumberPlate ,VehicleMake, OwnerName, AptNumber)
-    values(?,?,?,?,?);";
+    $sql = "INSERT INTO ResidentVehicle (Email, NumberPlate ,VehicleMake, OwnerName, AptNumber) values(?,?,?,?,?);";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("sssss", $Email, $NumberPlate, $VehicleMake,$OwnerName,$APtNumber);
     $stmt->execute(); 
-    echo([ $Email,$NumberPlate,$VehicleMake,$OwnerName,$APtNumber]);
+    // echo([ $Email,$NumberPlate,$VehicleMake,$OwnerName,$APtNumber]);
 }
 
 if($method==='POST' && $URI===$path."Resident.php/vehiclesView")
@@ -127,17 +108,16 @@ if($method==='POST' && $URI===$path."Resident.php/vehiclesView")
 }
 
 
-if($method==='POST' && $URI===$path."Resident.php/vehiclesView/vehicleId")
+if($method==='POST' && $URI===$path."Resident.php/delete-vehicleId")
 {
     $json = file_get_contents('php://input');
     $obj = json_decode($json);
-    $Email = $obj->Email;
-    $stmt = $conn->prepare("SELECT * from ResidentVehicle where Email=?");
-    $stmt->bind_param('s', $Email);
+    $VehicleId = $obj->VehicleId;
+    $sql = "DELETE FROM ResidentVehicle WHERE VehicleId=?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param('s', $VehicleId);
     $stmt->execute();
-    $results = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    echo json_encode($results);
+    echo($VehicleId);
 }
-
 $conn->close();
 ?>

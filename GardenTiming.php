@@ -2,6 +2,7 @@
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: *");
 header("Access-Control-Allow-Headers:*");
+header('Content-Type:application/json; charset=UTF-8');
 include "folderPath.php";
 
 $response='';
@@ -50,6 +51,22 @@ if($method==='POST' && $URI===$path."GardenTiming.php/timings")
     // echo json_encode();
 
 }
-// $conn->close();
-// return $response;
+
+
+if($method==='GET' && $URI===$path."GardenTiming.php/report")
+{
+    
+    $trp1 = mysqli_query($conn, "SELECT * from visitorlog");
+    $trp2 = mysqli_query($conn, "SELECT * from Residentlog");
+    $rows = array();
+    while($r = mysqli_fetch_assoc($trp1)) {
+        $rows[] = $r;
+    }
+    while($r = mysqli_fetch_assoc($trp2)) {
+        $rows[] = $r;
+    }
+    echo json_encode($rows);
+
+}
+
 ?>

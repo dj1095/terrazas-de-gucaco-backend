@@ -2,6 +2,7 @@
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: *");
 header("Access-Control-Allow-Headers:*");
+header('Content-Type:application/json; charset=UTF-8');
 
 include 'folderPath.php';
 $response='';
@@ -16,6 +17,12 @@ $pass = 'utacloud123';
 
 
 $conn = new mysqli($server, $user, $pass, $dbname);
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+
 $method=$_SERVER['REQUEST_METHOD'];
 $URI=$_SERVER['REQUEST_URI'];
 // http://localhost/terrazas-de-gucaco-backend/Pool.php/timings
@@ -63,11 +70,10 @@ if($method==='GET' && $URI===$path."Pool.php/visitor")
 
 }
 
-if($method==='DELETE' && $URI===$path."Pool.php/visitor")
+if($method==='DELETE' && strpos($URI, "Pool.php/visitor"))
 {
-    $json = file_get_contents('php://input');
-    $obj = json_decode($json);
-    $id = $obj->Id;
+    $data = json_decode(file_get_contents('php://input'), true);
+    $id = isset($_GET['Id']) ? $_GET['Id'] : "";
     $sql = "DELETE FROM visitorlog WHERE LogId=?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $id);
@@ -78,7 +84,7 @@ if($method==='DELETE' && $URI===$path."Pool.php/visitor")
 
 if($method==='GET' && $URI===$path."Pool.php/resident")
 {
-    $trp = mysqli_query($conn, "SELECT * from residentlog");
+    $trp = mysqli_query($conn, "SELECT * from Residentlog");
     $rows = array();
     while($r = mysqli_fetch_assoc($trp)) {
         $rows[] = $r;
@@ -87,16 +93,15 @@ if($method==='GET' && $URI===$path."Pool.php/resident")
 
 }
 
-
-if($method==='DELETE' && $URI===$path."Pool.php/resident")
+if($method==='DELETE' && strpos($URI, "Pool.php/resident"))
 {
-    $json = file_get_contents('php://input');
-    $obj = json_decode($json);
-    $id = $obj->Id;
-    $sql = "DELETE FROM residentlog WHERE LogId=?";
+    $data = json_decode(file_get_contents('php://input'), true);
+    $id = isset($_GET['Id']) ? $_GET['Id'] : "";
+    $sql = "DELETE FROM Residentlog WHERE LogId=?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $id);
-    $stmt->execute(); 
+    $result = $stmt->execute(); 
+    echo($result);
 
 }
 
@@ -114,4 +119,21 @@ if($method==='GET' && $URI===$path."Pool.php/log")
     }
     echo json_encode($rows); 
 
-}?>
+}
+
+if($method==='GET' && $URI===$path."Pool.php/report")
+{
+    
+    $trp1 = mysqli_query($conn, "SELECT * from visitorlog");
+    $trp2 = mysqli_query($conn, "SELECT * from Residentlog");
+    $rows = array();
+    while($r = mysqli_fetch_assoc($trp1)) {
+        $rows[] = $r;
+    }
+    while($r = mysqli_fetch_assoc($trp2)) {
+        $rows[] = $r;
+    }
+    echo json_encode($rows);
+
+}
+?>
